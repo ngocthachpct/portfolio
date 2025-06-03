@@ -240,16 +240,32 @@ Bạn muốn đi đến trang nào cụ thể?`
 
       // Get service endpoint for the intent
       const endpoint = this.INTENT_SERVICE_MAP[intent] || this.INTENT_SERVICE_MAP['default'];
-      const serviceUrl = `${baseUrl}${endpoint}?query=${encodeURIComponent(userMessage)}`;
+      // Sử dụng đúng domain production khi deploy trên Vercel
+      let realBaseUrl = baseUrl;
+      if (process.env.NODE_ENV === 'production') {
+        realBaseUrl = 'https://portfolio-thacjs-projects.vercel.app';
+      }
+      const serviceUrl = `${realBaseUrl}${endpoint}?query=${encodeURIComponent(userMessage)}`;
       
       // Make request to the specific service
       if (serviceUrl) {
         const startTime = Date.now();
         const response = await fetch(serviceUrl);
         const responseTime = Date.now() - startTime;
-        
         if (response.ok) {
-          const result = await response.json();
+          let result;
+          try {
+            result = await response.json();
+          } catch (jsonError) {
+            // If response is not valid JSON (e.g. HTML error page), fallback gracefully
+            console.error('Intent routing error: Invalid JSON from service', jsonError);
+            return {
+              response: "Xin lỗi, tôi gặp lỗi khi lấy dữ liệu từ dịch vụ. Hãy thử lại hoặc hỏi theo cách khác!",
+              intent: 'error',
+              source: 'router_error',
+              confidence: 0.1
+            };
+          }
           const finalResult = {
             response: result.response,
             intent: result.intent,
@@ -257,10 +273,8 @@ Bạn muốn đi đến trang nào cụ thể?`
             confidence: 0.9,
             responseTime
           };
-          
           // Cache the successful response
           ChatbotCache.cacheResponse(userMessage, intent, finalResult, 0.9);
-          
           return finalResult;
         }
       }
