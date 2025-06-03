@@ -374,14 +374,14 @@ Bạn muốn đi đến trang nào cụ thể?`
     }
       // Navigation commands - High priority after theme
     if (this.matchKeywords(lowerMessage, [
-      'đi tới trang chủ', 'go to home', 'navigate to home', 'tới trang chủ', 'chuyển tới trang chủ',
-      'vào trang chủ', 'mở trang chủ', 'direct to home', 'home page'
+      'đi tới trang chủ', 'go to home', 'navigate to home', 'tới trang chủ', 'đi tới Home', 'đi tới home', 'đi tới trang Home', 'đi tới trang home','chuyển tới trang chủ',
+      'vào trang chủ', 'mở trang chủ', 'mở trang Home','direct to home', 'home page'
     ]) || lowerMessage === 'trang chủ') {
       return 'navigate_home';
     }
 
     if (this.matchKeywords(lowerMessage, [
-      'đi tới about', 'go to about', 'navigate to about', 'chuyển tới about',
+      'đi tới about', 'đi tới About', 'đi tới trang about', 'đi tới trang About','go to about', 'navigate to about', 'chuyển tới about',
       'vào trang about', 'mở about', 'about page', 'giới thiệu page'
     ])) {
       return 'navigate_about';
@@ -485,9 +485,19 @@ Bạn muốn đi đến trang nào cụ thể?`
     return 'default';
   }
 
-  // Helper method to match keywords
+  // Helper method to match keywords (case-insensitive, accent-insensitive)
   private static matchKeywords(message: string, keywords: string[]): boolean {
-    return keywords.some(keyword => message.includes(keyword));
+    // Normalize message: lowercase and remove accents
+    const normalizedMsg = this.normalizeText(message);
+    return keywords.some(keyword => normalizedMsg.includes(this.normalizeText(keyword)));
+  }
+
+  // Helper to normalize text: lowercase and remove accents for robust matching
+  private static normalizeText(text: string): string {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '');
   }
 
   // Get available intents for help responses
