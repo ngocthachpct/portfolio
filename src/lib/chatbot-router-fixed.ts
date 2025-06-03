@@ -238,6 +238,38 @@ Bạn muốn đi đến trang nào cụ thể?`
         return cachedResponse;
       }
 
+      // --- Dynamic owner name for about/greeting/help intents ---
+      if (["about", "greeting", "help"].includes(intent)) {
+        let realBaseUrl = baseUrl;
+        if (process.env.NODE_ENV === 'production') {
+          realBaseUrl = 'https://portfolio-thacjs-projects.vercel.app';
+        }
+        // Fetch owner info from about API
+        try {
+          const aboutRes = await fetch(`${realBaseUrl}/api/chatbot/about?query=${encodeURIComponent(userMessage)}`);
+          if (aboutRes.ok) {
+            const aboutData = await aboutRes.json();
+            const ownerName = aboutData.response.match(/\*\*Tên:\*\* ([^\-\n]+)/)?.[1]?.trim() || 'Portfolio Owner';
+            let response = aboutData.response;
+            // For greeting/help, customize the message
+            if (intent === 'greeting') {
+              response = `Xin chào! 👋 Tôi là trợ lý AI của ${ownerName}. Hỏi tôi về dự án, kỹ năng, kinh nghiệm, blog hoặc liên hệ nhé!`;
+            } else if (intent === 'help') {
+              response = `💡 Tôi là trợ lý AI của ${ownerName}. Tôi có thể giúp bạn về: dự án, kỹ năng, kinh nghiệm, blog, hoặc thông tin liên hệ. Bạn muốn biết gì?`;
+            }
+            const result = {
+              response,
+              intent,
+              source: 'about_service',
+              confidence: 0.95
+            };
+            ChatbotCache.cacheResponse(userMessage, intent, result, 0.95);
+            return result;
+          }
+        } catch (err) {
+          // fallback to static response below
+        }
+      }
       // Get service endpoint for the intent
       const endpoint = this.INTENT_SERVICE_MAP[intent] || this.INTENT_SERVICE_MAP['default'];
       // Sử dụng đúng domain production khi deploy trên Vercel
