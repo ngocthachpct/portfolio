@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { ChatbotLearningService } from '@/lib/chatbot-learning';
-import ChatbotIntentRouter, { GREETING_RESPONSES, HELP_RESPONSES } from '@/lib/chatbot-router';
+import ChatbotIntentRouter, { GREETING_RESPONSES, HELP_RESPONSES } from '@/lib/chatbot-router-fixed';
 
 export async function POST(request: Request) {
   try {
@@ -32,10 +32,10 @@ export async function POST(request: Request) {
     const learnedResponse = await ChatbotLearningService.findLearnedResponse(
       message, 
       detectedIntent.intent
-    );
-
-    let response: string;
+    );    let response: string;
     let responseSource = 'default';
+    let themeAction: string | null = null;
+    let navigationAction: string | null = null;
 
     if (learnedResponse && learnedResponse.confidence > 0.6) {
       // Use learned response
@@ -52,9 +52,10 @@ export async function POST(request: Request) {
         message, 
         baseUrl
       );
-      
-      response = routedResponse.response;
+        response = routedResponse.response;
       responseSource = routedResponse.source;
+      themeAction = routedResponse.themeAction || null;
+      navigationAction = routedResponse.navigationAction || null;
       
       // Override confidence if routed successfully
       if (routedResponse.source !== 'router_fallback') {
@@ -82,15 +83,15 @@ export async function POST(request: Request) {
         detectedIntent.intent,
         detectedIntent.confidence
       ).catch(error => console.error('Failed to learn pattern:', error));
-    }
-
-    return NextResponse.json({ 
+    }    return NextResponse.json({ 
       response,
       intent: detectedIntent.intent,
       confidence: detectedIntent.confidence,
       source: responseSource,
       sessionId: currentSessionId,
-      responseTime
+      responseTime,
+      themeAction,
+      navigationAction
     });
 
   } catch (error) {

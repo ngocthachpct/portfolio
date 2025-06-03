@@ -32,12 +32,207 @@ class ChatbotIntentRouter {
     "Xin chào! Tôi có thể hỗ trợ bạn về projects, skills, experience, blog posts và contact information.",
     "Hi there! I can help you learn about projects, skills, background, blog content và ways to get in touch.",
     "Tôi sẵn sàng trả lời về portfolio, technical skills, work experience, recent blogs và contact details!"
-  ];
-
-  // Route intent to appropriate microservice
+  ];  // Route intent to appropriate microservice
   static async routeIntent(intent: string, userMessage: string, baseUrl: string): Promise<any> {
     try {
-      // Check cache first
+      // Handle navigation intents directly
+      if (intent.startsWith('navigate_')) {
+        const navigationResponses = {
+          navigate_home: `🏠 **Đang chuyển đến trang Home...**
+
+✨ **Trang chủ bao gồm:**
+• Welcome message và introduction
+• Featured projects showcase
+• Quick overview về skills
+• Call-to-action cho contact
+
+🎯 **Perfect để:**
+• First impression với visitors
+• Quick overview về portfolio
+• Navigate tới other sections
+• Professional introduction
+
+*Trang sẽ được chuyển trong giây lát...*`,
+
+          navigate_about: `👤 **Đang chuyển đến trang About...**
+
+📋 **Thông tin chi tiết về:**
+• Professional background & experience
+• Education và qualifications
+• Detailed skills breakdown
+• Career journey timeline
+• Personal interests & hobbies
+
+💼 **For recruiters:**
+• Complete professional profile
+• Work experience details
+• Technical competencies
+• Cultural fit indicators
+
+*Đang load trang About...*`,
+
+          navigate_projects: `🚀 **Đang chuyển đến trang Projects...**
+
+💻 **Showcase bao gồm:**
+• Live demos của tất cả projects
+• Source code links (GitHub)
+• Technology stacks used
+• Project descriptions & features
+• Screenshots & previews
+
+🔍 **Technical assessment:**
+• Code quality evaluation
+• Modern development practices
+• Problem-solving approaches
+• UI/UX design skills
+
+*Loading Projects page...*`,
+
+          navigate_blog: `📝 **Đang chuyển đến trang Blog...**
+
+📚 **Technical content:**
+• Development tutorials & tips
+• Industry insights & trends
+• Problem-solving articles
+• Learning journey sharing
+• Best practices discussions
+
+💡 **Shows:**
+• Technical writing skills
+• Knowledge sharing ability
+• Continuous learning mindset
+• Communication effectiveness
+
+*Đang chuyển tới Blog...*`,
+
+          navigate_contact: `📧 **Đang chuyển đến trang Contact...**
+
+🤝 **Professional communication:**
+• Direct contact form
+• Email và phone information
+• Social media links
+• Response time expectations
+• Preferred communication methods
+
+💼 **For business inquiries:**
+• Project collaboration opportunities
+• Technical consultation
+• Career opportunities
+• Partnership discussions
+
+*Loading Contact page...*`,
+
+          navigate_general: `🧭 **Navigation Guide**
+
+**Available pages:**
+• **Home** - Portfolio overview
+• **About** - Professional background
+• **Projects** - Technical showcase
+• **Blog** - Articles & insights
+• **Contact** - Get in touch
+
+Bạn muốn đi đến trang nào cụ thể?`
+        };
+
+        const response = navigationResponses[intent as keyof typeof navigationResponses] || 
+                        navigationResponses.navigate_general;
+
+        // Add navigation action for specific navigation intents
+        const navigationAction = intent === 'navigate_home' ? '/' :
+                               intent === 'navigate_about' ? '/about' :
+                               intent === 'navigate_projects' ? '/projects' :
+                               intent === 'navigate_blog' ? '/blog' :
+                               intent === 'navigate_contact' ? '/contact' : null;
+
+        return {
+          response,
+          source: 'navigation_direct',
+          confidence: 0.95,
+          navigationAction
+        };
+      }
+
+      // Handle theme intents directly
+      if (intent.startsWith('theme_')) {
+        const themeResponses = {
+          theme_dark: `🌙 **Dark mode đã được bật!**
+
+✅ **Thay đổi:**
+• Giao diện chuyển sang chế độ tối
+• Dễ nhìn hơn trong môi trường ít ánh sáng
+• Tiết kiệm pin cho thiết bị OLED
+• Giảm căng thẳng cho mắt khi làm việc ban đêm
+
+🎨 **Dark mode features:**
+• High contrast cho readability tốt hơn
+• Consistent color scheme trên toàn site
+• Smooth transition animation
+• Auto-save preference cho lần sau`,
+
+          theme_light: `☀️ **Light mode đã được bật!**
+
+✅ **Thay đổi:**
+• Giao diện chuyển sang chế độ sáng
+• Rõ ràng và sáng sủa
+• Phù hợp cho môi trường có ánh sáng tốt
+• Classic và professional appearance
+
+🎨 **Light mode features:**
+• Clean và minimalist design
+• Excellent readability ban ngày
+• High contrast text và backgrounds
+• Professional look cho business context`,
+
+          theme_system: `🔄 **System theme đã được bật!**
+
+✅ **Thay đổi:**
+• Theme sẽ theo setting hệ thống của bạn
+• Tự động chuyển dark/light theo OS
+• Sync với Windows/Mac/Linux preference
+• Smart adaptation theo thời gian trong ngày
+
+🎨 **Auto theme features:**
+• Seamless switching với OS changes
+• Respect user system preferences
+• No manual intervention needed
+• Consistent experience across devices`,
+
+          theme_usage: `🌙 **Cách chuyển đổi Theme:**
+
+**Dark/Light Mode:**
+• Click icon 🌙/☀️ ở góc trên bên phải
+• Theme sẽ chuyển ngay lập tức
+• Setting được lưu tự động
+• Sync với system preference
+
+**Lợi ích:**
+• **Dark mode**: dễ nhìn ban đêm, tiết kiệm pin
+• **Light mode**: sáng sủa, phù hợp ban ngày
+• **Auto**: theo setting hệ thống
+
+**Responsive:**
+• Theme hoạt động trên mọi thiết bị
+• Smooth transition animation
+• Không ảnh hưởng đến performance`
+        };
+
+        const response = themeResponses[intent as keyof typeof themeResponses] || 
+                        themeResponses.theme_usage;
+
+        // Add theme action for specific theme intents
+        const themeAction = intent === 'theme_dark' ? 'dark' :
+                          intent === 'theme_light' ? 'light' :
+                          intent === 'theme_system' ? 'system' : null;
+
+        return {
+          response,
+          source: 'theme_direct',
+          confidence: 0.95,
+          themeAction
+        };
+      }
+
+      // Check cache first for non-theme intents
       const cachedResponse = ChatbotCache.getCachedResponse(userMessage, intent);
       if (cachedResponse && cachedResponse.confidence > 0.8) {
         return cachedResponse;
@@ -98,10 +293,82 @@ class ChatbotIntentRouter {
       };
     }
   }
-
   // Enhanced intent detection with multiple keywords
   static detectIntent(message: string): string {
     const lowerMessage = message.toLowerCase();
+    
+    // Theme switching commands - Highest priority
+    if (this.matchKeywords(lowerMessage, [
+      'bật dark mode', 'turn on dark mode', 'enable dark mode', 'chuyển sang dark',
+      'switch to dark', 'đổi sang tối', 'set theme dark', 'dark theme',
+      'set dark mode', 'activate dark'
+    ])) {
+      return 'theme_dark';
+    }
+
+    if (this.matchKeywords(lowerMessage, [
+      'bật light mode', 'turn on light mode', 'enable light mode', 'chuyển sang light',
+      'switch to light', 'đổi sang sáng', 'set theme light', 'light theme',
+      'chế độ sáng', 'set light mode', 'activate light'
+    ])) {
+      return 'theme_light';
+    }
+
+    if (this.matchKeywords(lowerMessage, [
+      'system theme', 'auto theme', 'chế độ tự động', 'theo hệ thống',
+      'system mode', 'set theme system', 'set system mode', 'auto mode'
+    ])) {
+      return 'theme_system';
+    }    // Theme general usage - Lower priority
+    if (this.matchKeywords(lowerMessage, [
+      'dark mode', 'light mode', 'theme', 'chế độ tối', 'chế độ sáng', 'giao diện',
+      'màu sắc', 'color', 'switch theme', 'đổi theme', 'appearance'
+    ])) {
+      return 'theme_usage';
+    }
+      // Navigation commands - High priority after theme
+    if (this.matchKeywords(lowerMessage, [
+      'đi tới trang chủ', 'go to home', 'navigate to home', 'tới trang chủ', 'chuyển tới trang chủ',
+      'vào trang chủ', 'mở trang chủ', 'direct to home', 'home page'
+    ]) || lowerMessage === 'trang chủ') {
+      return 'navigate_home';
+    }
+
+    if (this.matchKeywords(lowerMessage, [
+      'đi tới about', 'go to about', 'navigate to about', 'chuyển tới about',
+      'vào trang about', 'mở about', 'about page', 'giới thiệu page'
+    ])) {
+      return 'navigate_about';
+    }
+
+    if (this.matchKeywords(lowerMessage, [
+      'đi tới projects', 'go to projects', 'navigate to projects', 'chuyển tới projects',
+      'vào trang projects', 'mở projects', 'project page', 'dự án page'
+    ])) {
+      return 'navigate_projects';
+    }
+
+    if (this.matchKeywords(lowerMessage, [
+      'đi tới blog', 'go to blog', 'navigate to blog', 'chuyển tới blog',
+      'vào trang blog', 'mở blog', 'blog page', 'bài viết page'
+    ])) {
+      return 'navigate_blog';
+    }
+
+    if (this.matchKeywords(lowerMessage, [
+      'đi tới contact', 'go to contact', 'navigate to contact', 'chuyển tới contact',
+      'vào trang contact', 'tới trang contact','mở contact', 'contact page', 'liên hệ page'
+    ])) {
+      return 'navigate_contact';
+    }
+
+    // General navigation detection - must be more specific
+    if (this.matchKeywords(lowerMessage, [
+      'đi tới', 'go to', 'navigate to', 'chuyển tới', 'vào trang', 'mở trang',
+      'direct to', 'visit', 'hướng dẫn tới', 'dẫn tới'
+    ]) && !this.matchKeywords(lowerMessage, ['dự án', 'project', 'blog', 'about', 'contact', 'home'])) {
+      return 'navigate_general';
+    }
     
     // Enhanced blog detection - CHECK FIRST for better priority
     if (this.matchKeywords(lowerMessage, [

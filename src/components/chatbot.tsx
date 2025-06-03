@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -123,6 +124,7 @@ export function Chatbot() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatbotRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { setTheme } = useTheme();
 
   // Generate session ID on component mount
   useEffect(() => {
@@ -207,25 +209,33 @@ export function Chatbot() {
           message: currentMessage,
           sessionId: sessionId
         }),
-      });
-
-      if (response.ok) {
+      });      if (response.ok) {
         const data = await response.json();
         
-        // Check if the intent from API is a navigation intent
-        if (NAVIGATION_INTENTS.includes(data.intent)) {
-          // Add bot message first, then navigate after a short delay
-          addBotMessage(data.response, data);
-          
-          // Navigate after showing the message
+        // Add bot message first
+        addBotMessage(data.response, data);
+          // Check if there's a theme action instruction from API
+        if (data.themeAction) {
+          // Apply theme change
+          setTheme(data.themeAction);
+        }
+          // Check if there's a navigation action instruction from API
+        if (data.navigationAction) {
+          console.log('Navigation action detected:', data.navigationAction);
+          // Navigate after showing the message using both router and window.location for robustness
           setTimeout(() => {
-            const route = PAGE_ROUTES[data.intent as keyof typeof PAGE_ROUTES];
-            if (route) {
-              router.push(route);
+            console.log('Executing navigation to:', data.navigationAction);
+            try {
+              // Try Next.js router first
+              router.push(data.navigationAction);
+            } catch (error) {
+              console.error('Router navigation failed, falling back to window.location', error);
+              // Fallback to window.location if router fails
+              if (typeof window !== 'undefined') {
+                window.location.href = data.navigationAction;
+              }
             }
           }, 2000);
-        } else {
-          addBotMessage(data.response, data);
         }
       } else {
         // Fallback to local responses if API fails
