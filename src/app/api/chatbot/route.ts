@@ -33,13 +33,6 @@ export async function POST(request: Request) {
       console.warn('Database context unavailable, using basic intent detection:', dbError);
     }
 
-<<<<<<< HEAD
-    // Try to find learned response first
-    const learnedResponse = await ChatbotLearningService.findLearnedResponse(
-      message, 
-      detectedIntent.intent
-    );    let response: string;
-=======
     // Try to find learned response first (with database fallback)
     let learnedResponse = null;
     try {
@@ -52,7 +45,6 @@ export async function POST(request: Request) {
     }
 
     let response: string;
->>>>>>> 4155c4fc1203e9ab03f50248c2a0f34658092516
     let responseSource = 'default';
     let themeAction: string | null = null;
     let navigationAction: string | null = null;
@@ -62,37 +54,25 @@ export async function POST(request: Request) {
       response = learnedResponse.response;
       responseSource = 'learned';
     } else {
-<<<<<<< HEAD
       // Use new microservice routing system
       const baseUrl = process.env.NODE_ENV === 'production' 
         ? 'https://your-domain.com' 
         : 'http://localhost:3000';
-        
       const routedResponse = await ChatbotIntentRouter.routeIntent(
         detectedIntent.intent, 
         message, 
         baseUrl
       );
-        response = routedResponse.response;
+      response = routedResponse.response;
       responseSource = routedResponse.source;
       themeAction = routedResponse.themeAction || null;
       navigationAction = routedResponse.navigationAction || null;
-      
       // Override confidence if routed successfully
       if (routedResponse.source !== 'router_fallback') {
         detectedIntent.confidence = routedResponse.confidence;
-=======
-      // Generate response directly instead of using microservice routing
-      try {
-        response = await generateResponse(detectedIntent.intent);
-        responseSource = 'direct';
-      } catch (generateError) {
-        console.error('Error generating response:', generateError);
-        response = ChatbotIntentRouter.getFallbackResponse(detectedIntent.intent);
-        responseSource = 'fallback';
->>>>>>> 4155c4fc1203e9ab03f50248c2a0f34658092516
       }
-    }    const responseTime = Date.now() - startTime;
+    }
+    const responseTime = Date.now() - startTime;
 
     // Save conversation for learning (fire and forget) - with error handling
     try {
@@ -111,14 +91,6 @@ export async function POST(request: Request) {
 
     // Learn new pattern if confidence is low (fire and forget) - with error handling
     if (detectedIntent.confidence < 0.7) {
-<<<<<<< HEAD
-      ChatbotLearningService.learnNewPattern(
-        message,
-        detectedIntent.intent,
-        detectedIntent.confidence
-      ).catch(error => console.error('Failed to learn pattern:', error));
-    }    return NextResponse.json({ 
-=======
       try {
         await ChatbotLearningService.learnNewPattern(
           message,
@@ -131,7 +103,6 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ 
->>>>>>> 4155c4fc1203e9ab03f50248c2a0f34658092516
       response,
       intent: detectedIntent.intent,
       confidence: detectedIntent.confidence,
