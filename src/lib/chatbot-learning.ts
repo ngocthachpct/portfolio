@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/db';
+import { prisma, safeDatabaseOperation } from '@/lib/db';
 
 interface LearningContext {
   sessionId: string;
@@ -18,8 +18,7 @@ interface LearningPattern {
   examples: string[];
 }
 
-export class ChatbotLearningService {
-  // Lưu conversation và message để học hỏi
+export class ChatbotLearningService {  // Lưu conversation và message để học hỏi
   static async saveConversationMessage(
     sessionId: string,
     userMessage: string,
@@ -28,8 +27,8 @@ export class ChatbotLearningService {
     confidence: number,
     responseTime: number,
     userId?: string
-  ) {
-    try {
+  ): Promise<void> {
+    return safeDatabaseOperation(async () => {
       // Tìm hoặc tạo conversation
       let conversation = await prisma.chatConversation.findFirst({
         where: { sessionId, endedAt: null }
@@ -43,9 +42,7 @@ export class ChatbotLearningService {
             totalMessages: 0
           }
         });
-      }
-
-      // Lưu user message
+      }      // Lưu user message
       const userMsg = await prisma.chatMessage.create({
         data: {
           conversationId: conversation.id,
@@ -75,13 +72,9 @@ export class ChatbotLearningService {
         }
       });
 
-      return { conversationId: conversation.id, messageId: userMsg.id };
-    } catch (error) {
-      console.error('Error saving conversation:', error);
-      return null;
-    }
+      return;
+    }, undefined, 'Error saving conversation message');
   }
-
   // Lưu feedback từ user để học hỏi
   static async saveFeedback(
     conversationId: string,
@@ -89,8 +82,8 @@ export class ChatbotLearningService {
     rating: number,
     feedbackType: 'HELPFUL' | 'NOT_HELPFUL' | 'SUGGESTION' | 'COMPLAINT' | 'COMPLIMENT',
     comment?: string
-  ) {
-    try {
+  ): Promise<boolean> {
+    return safeDatabaseOperation(async () => {
       await prisma.chatFeedback.create({
         data: {
           conversationId,
@@ -113,15 +106,11 @@ export class ChatbotLearningService {
       await this.learnFromFeedback(messageId, rating >= 3);
       
       return true;
-    } catch (error) {
-      console.error('Error saving feedback:', error);
-      return false;
-    }
+    }, false, 'Error saving feedback');
   }
-
   // Học hỏi từ feedback để cải thiện responses
-  static async learnFromFeedback(messageId: string, wasHelpful: boolean) {
-    try {
+  static async learnFromFeedback(messageId: string, wasHelpful: boolean): Promise<void> {
+    return safeDatabaseOperation(async () => {
       const message = await prisma.chatMessage.findUnique({
         where: { id: messageId },
         include: { conversation: true }
@@ -154,8 +143,7 @@ export class ChatbotLearningService {
         });
       } else if (wasHelpful && message.response) {
         // Tạo knowledge base entry mới từ successful interaction
-        await prisma.chatKnowledgeBase.create({
-          data: {
+        await prisma.chatKnowledgeBase.create({          data: {
             question: message.content.toLowerCase(),
             answer: message.response,
             intent: message.intent,
@@ -166,14 +154,12 @@ export class ChatbotLearningService {
           }
         });
       }
-    } catch (error) {
-      console.error('Error learning from feedback:', error);
-    }
+      return;
+    }, undefined, 'Error learning from feedback');
   }
-
   // Tìm learned response từ knowledge base
   static async findLearnedResponse(userMessage: string, intent: string) {
-    try {
+    return safeDatabaseOperation(async () => {
       // Tìm exact match hoặc similar question
       const knowledgeEntries = await prisma.chatKnowledgeBase.findMany({
         where: {
@@ -207,19 +193,14 @@ export class ChatbotLearningService {
             confidence: entry.confidence,
             source: 'learned'
           };
-        }
-      }
+        }      }
 
       return null;
-    } catch (error) {
-      console.error('Error finding learned response:', error);
-      return null;
-    }
+    }, null, 'Error finding learned response');
   }
-
   // Học patterns mới từ user interactions
-  static async learnNewPattern(userMessage: string, intent: string, confidence: number) {
-    try {
+  static async learnNewPattern(userMessage: string, intent: string, confidence: number): Promise<void> {
+    return safeDatabaseOperation(async () => {
       const keywords = this.extractKeywords(userMessage);
       const pattern = keywords.join('|'); // Simple regex pattern
 
@@ -235,8 +216,7 @@ export class ChatbotLearningService {
           data: {
             successCount: { increment: 1 },
             totalAttempts: { increment: 1 },
-            lastUsed: new Date(),
-            examples: {
+            lastUsed: new Date(),            examples: {
               push: userMessage
             }
           }
@@ -256,14 +236,12 @@ export class ChatbotLearningService {
           }
         });
       }
-    } catch (error) {
-      console.error('Error learning new pattern:', error);
-    }
+      return;
+    }, undefined, 'Error learning new pattern');
   }
-
   // Phân tích conversation context để hiểu better
   static async analyzeConversationContext(sessionId: string): Promise<LearningContext> {
-    try {
+    return safeDatabaseOperation(async () => {
       const conversation = await prisma.chatConversation.findFirst({
         where: { sessionId, endedAt: null },
         include: {
@@ -277,8 +255,7 @@ export class ChatbotLearningService {
       if (!conversation) {
         return {
           sessionId,
-          previousMessages: []
-        };
+          previousMessages: []        };
       }
 
       const previousMessages = conversation.messages.map((msg: {
@@ -298,18 +275,14 @@ export class ChatbotLearningService {
         userId: conversation.userId || undefined,
         previousMessages
       };
-    } catch (error) {
-      console.error('Error analyzing conversation context:', error);
-      return {
-        sessionId,
-        previousMessages: []
-      };
-    }
+    }, {
+      sessionId,
+      previousMessages: []
+    }, 'Error analyzing conversation context');
   }
-
   // Improved intent detection sử dụng learned patterns
   static async improvedIntentDetection(userMessage: string, context: LearningContext) {
-    try {
+    return safeDatabaseOperation(async () => {
       // Get learned patterns
       const patterns = await prisma.chatLearningPattern.findMany({
         where: { isActive: true },
@@ -333,14 +306,10 @@ export class ChatbotLearningService {
               lastUsed: new Date()
             }
           });
-        }
-      }
+        }      }
 
       return bestMatch;
-    } catch (error) {
-      console.error('Error in improved intent detection:', error);
-      return null;
-    }
+    }, null, 'Error in improved intent detection');
   }
 
   // Helper methods

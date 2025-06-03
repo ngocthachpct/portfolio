@@ -16,23 +16,33 @@ export async function POST(request: Request) {
     // Generate session ID if not provided
     const currentSessionId = sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Get conversation context for better understanding
-    const context = await ChatbotLearningService.analyzeConversationContext(currentSessionId);
+    // Detect intent using router
+    const intent = ChatbotIntentRouter.detectIntent(message);
+    let detectedIntent = { intent, confidence: 0.7 };
 
-    // Try improved intent detection first (using learned patterns)
-    let detectedIntent = await ChatbotLearningService.improvedIntentDetection(message, context);
-    
-    // Fallback to enhanced intent detection if no learned pattern matches
-    if (!detectedIntent) {
-      const intent = ChatbotIntentRouter.detectIntent(message);
-      detectedIntent = { intent, confidence: 0.7 };
+    // Try to get database context if available
+    let context = null;
+    try {
+      context = await ChatbotLearningService.analyzeConversationContext(currentSessionId);
+      // Try improved intent detection with learned patterns
+      const improvedIntent = await ChatbotLearningService.improvedIntentDetection(message, context);
+      if (improvedIntent) {
+        detectedIntent = improvedIntent;
+      }
+    } catch (dbError) {
+      console.warn('Database context unavailable, using basic intent detection:', dbError);
     }
 
-    // Try to find learned response first
-    const learnedResponse = await ChatbotLearningService.findLearnedResponse(
-      message, 
-      detectedIntent.intent
-    );
+    // Try to find learned response first (with database fallback)
+    let learnedResponse = null;
+    try {
+      learnedResponse = await ChatbotLearningService.findLearnedResponse(
+        message, 
+        detectedIntent.intent
+      );
+    } catch (dbError) {
+      console.warn('Learned response unavailable, using direct generation:', dbError);
+    }
 
     let response: string;
     let responseSource = 'default';
@@ -42,46 +52,43 @@ export async function POST(request: Request) {
       response = learnedResponse.response;
       responseSource = 'learned';
     } else {
-      // Use new microservice routing system
-      const baseUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://your-domain.com' 
-        : 'http://localhost:3000';
-        
-      const routedResponse = await ChatbotIntentRouter.routeIntent(
-        detectedIntent.intent, 
-        message, 
-        baseUrl
-      );
-      
-      response = routedResponse.response;
-      responseSource = routedResponse.source;
-      
-      // Override confidence if routed successfully
-      if (routedResponse.source !== 'router_fallback') {
-        detectedIntent.confidence = routedResponse.confidence;
+      // Generate response directly instead of using microservice routing
+      try {
+        response = await generateResponse(detectedIntent.intent);
+        responseSource = 'direct';
+      } catch (generateError) {
+        console.error('Error generating response:', generateError);
+        response = ChatbotIntentRouter.getFallbackResponse(detectedIntent.intent);
+        responseSource = 'fallback';
       }
+    }    const responseTime = Date.now() - startTime;
+
+    // Save conversation for learning (fire and forget) - with error handling
+    try {
+      await ChatbotLearningService.saveConversationMessage(
+        currentSessionId,
+        message,
+        response,
+        detectedIntent.intent,
+        detectedIntent.confidence,
+        responseTime,
+        userId
+      );
+    } catch (saveError) {
+      console.warn('Failed to save conversation (non-critical):', saveError);
     }
 
-    const responseTime = Date.now() - startTime;
-
-    // Save conversation for learning (fire and forget)
-    ChatbotLearningService.saveConversationMessage(
-      currentSessionId,
-      message,
-      response,
-      detectedIntent.intent,
-      detectedIntent.confidence,
-      responseTime,
-      userId
-    ).catch(error => console.error('Failed to save conversation:', error));
-
-    // Learn new pattern if confidence is low (fire and forget)
+    // Learn new pattern if confidence is low (fire and forget) - with error handling
     if (detectedIntent.confidence < 0.7) {
-      ChatbotLearningService.learnNewPattern(
-        message,
-        detectedIntent.intent,
-        detectedIntent.confidence
-      ).catch(error => console.error('Failed to learn pattern:', error));
+      try {
+        await ChatbotLearningService.learnNewPattern(
+          message,
+          detectedIntent.intent,
+          detectedIntent.confidence
+        );
+      } catch (learnError) {
+        console.warn('Failed to learn pattern (non-critical):', learnError);
+      }
     }
 
     return NextResponse.json({ 
@@ -92,13 +99,20 @@ export async function POST(request: Request) {
       sessionId: currentSessionId,
       responseTime
     });
-
   } catch (error) {
     console.error('Chatbot API error:', error);
-    return NextResponse.json(
-      { error: 'Failed to process message' },
-      { status: 500 }
-    );
+    
+    // Provide a graceful fallback response
+    const fallbackResponse = "Xin chào! Tôi có thể giúp bạn tìm hiểu về dự án, kỹ năng, kinh nghiệm và thông tin liên hệ. Hãy hỏi tôi bất cứ điều gì!";
+    
+    return NextResponse.json({
+      response: fallbackResponse,
+      intent: 'greeting',
+      confidence: 0.5,
+      source: 'error_fallback',
+      sessionId: `fallback_${Date.now()}`,
+      responseTime: 100
+    });
   }
 }
 
