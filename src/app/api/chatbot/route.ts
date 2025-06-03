@@ -56,8 +56,8 @@ export async function POST(request: Request) {
     } else {
       // Use new microservice routing system
       const baseUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://your-domain.com' 
-        : 'http://localhost:3000';
+        ? 'https://portfolio-thacjs-projects.vercel.app' 
+        : 'https://portfolio-seven-navy-77.vercel.app/';
       const routedResponse = await ChatbotIntentRouter.routeIntent(
         detectedIntent.intent, 
         message, 

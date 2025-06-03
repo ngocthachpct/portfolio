@@ -4,11 +4,16 @@ import { prisma } from '@/lib/db';
 // Helper function to fetch dynamic owner information from APIs
 async function fetchOwnerInfo() {
   try {
+    // Use correct base URL for production or development
+    let baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    if (process.env.NODE_ENV === 'production') {
+      baseUrl = 'https://portfolio-thacjs-projects.vercel.app';
+    }
     // Fetch home content (for name from title), about content and contact info from database
     const [homeResponse, aboutResponse, contactResponse] = await Promise.all([
-      fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/home`),
-      fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/about`),
-      fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/contact-info`)
+      fetch(`${baseUrl}/api/home`),
+      fetch(`${baseUrl}/api/about`),
+      fetch(`${baseUrl}/api/contact-info`)
     ]);
 
     const homeData = homeResponse.ok ? await homeResponse.json() : null;
