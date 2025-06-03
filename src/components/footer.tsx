@@ -1,7 +1,46 @@
+'use client';
+
 import Link from "next/link";
 import { Separator } from "./ui/separator";
+import { useEffect, useState } from "react";
+
+interface ContactInfo {
+  email: string;
+  phone: string;
+  address: string;
+  githubUrl: string;
+  linkedinUrl: string;
+  twitterUrl: string;
+  description: string;
+}
 
 export function Footer() {
+  const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
+
+  useEffect(() => {
+    fetchContactInfo();
+  }, []);
+
+  const fetchContactInfo = async () => {
+    try {
+      const response = await fetch('/api/contact-info');
+      if (response.ok) {
+        const data = await response.json();
+        setContactInfo(data);
+      }
+    } catch (error) {
+      console.error('Error fetching contact info:', error);
+    }
+  };
+
+  // Helper function to ensure URL has protocol
+  const ensureProtocol = (url: string) => {
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return `https://${url}`;
+    }
+    return url;
+  };
+
   return (
     <footer className="border-t">
       <div className="container py-8 md:py-12">
@@ -53,30 +92,41 @@ export function Footer() {
           <div className="space-y-4">
             <h3 className="font-bold text-lg">Social</h3>
             <nav className="flex flex-col gap-2">
-              <Link
-                href="https://github.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                GitHub
-              </Link>
-              <Link
-                href="https://linkedin.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                LinkedIn
-              </Link>
-              <Link
-                href="https://twitter.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Twitter
-              </Link>
+              {contactInfo?.githubUrl && (
+                <Link
+                  href={ensureProtocol(contactInfo.githubUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  GitHub
+                </Link>
+              )}
+              {contactInfo?.linkedinUrl && (
+                <Link
+                  href={ensureProtocol(contactInfo.linkedinUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  LinkedIn
+                </Link>
+              )}
+              {contactInfo?.twitterUrl && (
+                <Link
+                  href={ensureProtocol(contactInfo.twitterUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Twitter
+                </Link>
+              )}
+              {!contactInfo?.githubUrl && !contactInfo?.linkedinUrl && !contactInfo?.twitterUrl && (
+                <p className="text-sm text-muted-foreground">
+                  Social links will appear here once configured.
+                </p>
+              )}
             </nav>
           </div>
         </div>

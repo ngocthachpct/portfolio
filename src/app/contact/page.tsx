@@ -9,11 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Github, Linkedin, Mail, MapPin, Phone } from "lucide-react";
+import { Github, Linkedin, Mail, MapPin, Phone, Twitter } from "lucide-react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import emailjs from "@emailjs/browser";
 
 const contactFormSchema = z.object({
@@ -25,9 +25,21 @@ const contactFormSchema = z.object({
 
 type ContactFormValues = z.infer<typeof contactFormSchema>;
 
+interface ContactInfo {
+  email: string;
+  phone: string;
+  address: string;
+  githubUrl: string;
+  linkedinUrl: string;
+  twitterUrl: string;
+  description: string;
+}
+
 export default function ContactPage() {
   const formRef = useRef<HTMLFormElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
@@ -38,6 +50,24 @@ export default function ContactPage() {
       message: "",
     },
   });
+
+  useEffect(() => {
+    fetchContactInfo();
+  }, []);
+
+  const fetchContactInfo = async () => {
+    try {
+      const response = await fetch('/api/contact-info');
+      if (response.ok) {
+        const data = await response.json();
+        setContactInfo(data);
+      }
+    } catch (error) {
+      console.error('Error fetching contact info:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const onSubmit = async (data: ContactFormValues) => {
     setIsSubmitting(true);
@@ -83,6 +113,19 @@ export default function ContactPage() {
     }
   };
 
+  // Helper function to format display URL
+  const formatDisplayUrl = (url: string) => {
+    return url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  };
+
+  // Helper function to ensure URL has protocol
+  const ensureProtocol = (url: string) => {
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return `https://${url}`;
+    }
+    return url;
+  };
+
   return (
     <Container>
       <Section
@@ -99,18 +142,39 @@ export default function ContactPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-5 w-5 text-muted-foreground" />
-                  <span>your.email@example.com</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Phone className="h-5 w-5 text-muted-foreground" />
-                  <span>+1 (555) 123-4567</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <MapPin className="h-5 w-5 text-muted-foreground" />
-                  <span>San Francisco, CA</span>
-                </div>
+                {isLoading ? (
+                  <div className="space-y-3">
+                    <div className="h-6 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-6 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-6 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                ) : (
+                  <>
+                    {contactInfo?.email && (
+                      <div className="flex items-center space-x-3">
+                        <Mail className="h-5 w-5 text-muted-foreground" />
+                        <span>{contactInfo.email}</span>
+                      </div>
+                    )}
+                    {contactInfo?.phone && (
+                      <div className="flex items-center space-x-3">
+                        <Phone className="h-5 w-5 text-muted-foreground" />
+                        <span>{contactInfo.phone}</span>
+                      </div>
+                    )}
+                    {contactInfo?.address && (
+                      <div className="flex items-center space-x-3">
+                        <MapPin className="h-5 w-5 text-muted-foreground" />
+                        <span>{contactInfo.address}</span>
+                      </div>
+                    )}
+                    {!contactInfo?.email && !contactInfo?.phone && !contactInfo?.address && (
+                      <div className="text-muted-foreground text-sm">
+                        Contact information will be displayed here once configured.
+                      </div>
+                    )}
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -118,30 +182,63 @@ export default function ContactPage() {
               <CardHeader>
                 <CardTitle>Connect With Me</CardTitle>
                 <CardDescription>
-                  Follow me on social media or check out my work.
+                  {contactInfo?.description || "Follow me on social media or check out my work."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <Github className="h-5 w-5 text-muted-foreground" />
-                  <Link
-                    href="https://github.com/yourusername"
-                    target="_blank"
-                    className="hover:underline"
-                  >
-                    github.com/yourusername
-                  </Link>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Linkedin className="h-5 w-5 text-muted-foreground" />
-                  <Link
-                    href="https://linkedin.com/in/yourusername"
-                    target="_blank"
-                    className="hover:underline"
-                  >
-                    linkedin.com/in/yourusername
-                  </Link>
-                </div>
+                {isLoading ? (
+                  <div className="space-y-3">
+                    <div className="h-6 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-6 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                ) : (
+                  <>
+                    {contactInfo?.githubUrl && (
+                      <div className="flex items-center space-x-3">
+                        <Github className="h-5 w-5 text-muted-foreground" />
+                        <Link
+                          href={ensureProtocol(contactInfo.githubUrl)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:underline"
+                        >
+                          {formatDisplayUrl(contactInfo.githubUrl)}
+                        </Link>
+                      </div>
+                    )}
+                    {contactInfo?.linkedinUrl && (
+                      <div className="flex items-center space-x-3">
+                        <Linkedin className="h-5 w-5 text-muted-foreground" />
+                        <Link
+                          href={ensureProtocol(contactInfo.linkedinUrl)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:underline"
+                        >
+                          {formatDisplayUrl(contactInfo.linkedinUrl)}
+                        </Link>
+                      </div>
+                    )}
+                    {contactInfo?.twitterUrl && (
+                      <div className="flex items-center space-x-3">
+                        <Twitter className="h-5 w-5 text-muted-foreground" />
+                        <Link
+                          href={ensureProtocol(contactInfo.twitterUrl)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:underline"
+                        >
+                          {formatDisplayUrl(contactInfo.twitterUrl)}
+                        </Link>
+                      </div>
+                    )}
+                    {!contactInfo?.githubUrl && !contactInfo?.linkedinUrl && !contactInfo?.twitterUrl && (
+                      <div className="text-muted-foreground text-sm">
+                        Social media links will be displayed here once configured.
+                      </div>
+                    )}
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>

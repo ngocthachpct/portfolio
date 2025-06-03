@@ -2,39 +2,117 @@ import { Container } from "@/components/container";
 import { Section } from "@/components/section";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { prisma } from "@/lib/db";
+import Image from "next/image";
 
 export const metadata = {
   title: "About | Portfolio",
   description: "Learn more about my skills, experience, and background.",
 };
 
-export default function AboutPage() {
+async function getAboutContent() {
+  // Get the first about content record or create a default one if none exists
+  let aboutContent = await prisma.aboutContent.findFirst();
+
+  if (!aboutContent) {
+    // Create default about content if none exists
+    aboutContent = await prisma.aboutContent.create({
+      data: {
+        aboutTitle: "About Me",
+        aboutDescription: "I'm a passionate developer with experience in building web applications using modern technologies. I enjoy solving complex problems and creating intuitive user experiences.",
+        heading: "Hi, I'm Your Name",
+        skills: "React, Next.js, TypeScript, Node.js, Express, MongoDB, PostgreSQL, Tailwind CSS",
+        experience: "Senior Developer at XYZ Company (2020-Present)\nJunior Developer at ABC Corp (2018-2020)",
+        education: "Bachelor of Science in Computer Science (2018)\nWeb Development Bootcamp (2017)",
+      },
+    });
+  }
+
+  return aboutContent;
+}
+
+export default async function AboutPage() {
+  const aboutContent = await getAboutContent();
+
+  // Parse skills into an array
+  const skillsList = aboutContent.skills.split(',').map(skill => skill.trim());
+
+  // Split skills into categories (for demonstration)
+  const frontendSkills = skillsList.filter(skill =>
+    ['React', 'Next.js', 'TypeScript', 'JavaScript', 'HTML', 'CSS', 'Tailwind'].some(tech =>
+      skill.includes(tech)
+    )
+  );
+
+  const backendSkills = skillsList.filter(skill =>
+    ['Node', 'Express', 'MongoDB', 'PostgreSQL', 'SQL', 'API'].some(tech =>
+      skill.includes(tech)
+    )
+  );
+
+  const otherSkills = skillsList.filter(skill =>
+    !frontendSkills.includes(skill) && !backendSkills.includes(skill)
+  );
+
+  // Parse experience and education into arrays
+  const experienceItems = aboutContent.experience.split('\n')
+    .filter(item => item.trim().length > 0)
+    .map(item => {
+      const parts = item.split('(');
+      const title = parts[0].trim();
+      const periodMatch = item.match(/\((.*?)\)/);
+      const period = periodMatch ? periodMatch[1] : '';
+      const company = title.split(' at ')[1] || 'Company';
+      const role = title.split(' at ')[0] || title;
+      return { title: role, company, period, description: '' };
+    });
+
+  const educationItems = aboutContent.education.split('\n')
+    .filter(item => item.trim().length > 0)
+    .map(item => {
+      const parts = item.split('(');
+      const degree = parts[0].trim();
+      const periodMatch = item.match(/\((.*?)\)/);
+      const period = periodMatch ? periodMatch[1] : '';
+      return { degree, institution: '', period, description: '' };
+    });
+
   return (
     <Container>
       <Section
-        title="About Me"
-        description="Learn more about my skills, experience, and background."
+        title={aboutContent.aboutTitle}
+        description={aboutContent.aboutDescription}
       >
         <div className="space-y-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             <div className="space-y-4">
-              <h3 className="text-2xl font-bold">Hi, I'm Your Name</h3>
+              <h3 className="text-2xl font-bold">{aboutContent.heading}</h3>
               <p className="text-muted-foreground">
-                I'm a passionate full-stack developer with expertise in building
-                modern web applications. I specialize in React, Next.js, and
-                TypeScript, and I'm dedicated to creating beautiful,
-                user-friendly interfaces with clean, maintainable code.
-              </p>
-              <p className="text-muted-foreground">
-                With a strong foundation in both front-end and back-end
-                development, I enjoy tackling complex problems and turning ideas
-                into reality. I'm constantly learning and exploring new
-                technologies to stay at the forefront of web development.
+                {aboutContent.aboutDescription}
               </p>
             </div>
-            <div className="aspect-square bg-muted rounded-2xl flex items-center justify-center">
-              <p className="text-muted-foreground">Your Image Here</p>
+            <div className="w-2/3 h-full aspect-square bg-muted rounded-full flex items-center justify-center overflow-hidden">
+              {aboutContent.avatarUrl ? (
+                <div className="relative w-full h-full">
+                  {/* Viền gradient xoay */}
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-orange-400 via-pink-400 to-purple-600 animate-spin"></div>
+
+                  {/* Ảnh avatar tĩnh bên trong */}
+                  <div className="absolute inset-[2px] rounded-full overflow-hidden bg-background">
+                    <Image
+                      src={aboutContent.avatarUrl}
+                      alt="Profile picture"
+                      fill
+                      style={{ objectFit: 'cover' }}
+                      className="rounded-full"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">Your Image Here</p>
+              )}
             </div>
+
           </div>
 
           <Separator />
@@ -49,48 +127,42 @@ export default function AboutPage() {
               <div className="space-y-4">
                 <h3 className="text-xl font-bold">Technical Skills</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <SkillCard title="Frontend" skills={["React", "Next.js", "TypeScript", "Tailwind CSS", "HTML/CSS"]} />
-                  <SkillCard title="Backend" skills={["Node.js", "Express", "MongoDB", "PostgreSQL", "REST APIs"]} />
-                  <SkillCard title="Tools" skills={["Git", "GitHub", "VS Code", "Figma", "Vercel"]} />
+                  {frontendSkills.length > 0 && (
+                    <SkillCard title="Frontend" skills={frontendSkills} />
+                  )}
+                  {backendSkills.length > 0 && (
+                    <SkillCard title="Backend" skills={backendSkills} />
+                  )}
+                  {otherSkills.length > 0 && (
+                    <SkillCard title="Tools & Others" skills={otherSkills} />
+                  )}
                 </div>
               </div>
             </TabsContent>
             <TabsContent value="experience" className="space-y-6 pt-6">
               <div className="space-y-6">
-                <ExperienceItem
-                  title="Senior Frontend Developer"
-                  company="Company Name"
-                  period="2021 - Present"
-                  description="Led the development of modern web applications using React, Next.js, and TypeScript. Implemented responsive designs and improved performance."
-                />
-                <ExperienceItem
-                  title="Web Developer"
-                  company="Another Company"
-                  period="2018 - 2021"
-                  description="Developed and maintained client websites. Collaborated with designers to implement responsive layouts and interactive features."
-                />
-                <ExperienceItem
-                  title="Junior Developer"
-                  company="First Company"
-                  period="2016 - 2018"
-                  description="Assisted in the development of web applications. Gained experience in HTML, CSS, JavaScript, and various frameworks."
-                />
+                {experienceItems.map((item, index) => (
+                  <ExperienceItem
+                    key={index}
+                    title={item.title}
+                    company={item.company}
+                    period={item.period}
+                    description={item.description || "Worked on various projects and contributed to the company's success."}
+                  />
+                ))}
               </div>
             </TabsContent>
             <TabsContent value="education" className="space-y-6 pt-6">
               <div className="space-y-6">
-                <EducationItem
-                  degree="Master's in Computer Science"
-                  institution="University Name"
-                  period="2014 - 2016"
-                  description="Focused on web development and software engineering. Completed thesis on modern JavaScript frameworks."
-                />
-                <EducationItem
-                  degree="Bachelor's in Computer Science"
-                  institution="University Name"
-                  period="2010 - 2014"
-                  description="Studied programming fundamentals, data structures, algorithms, and web development basics."
-                />
+                {educationItems.map((item, index) => (
+                  <EducationItem
+                    key={index}
+                    degree={item.degree}
+                    institution={item.institution || "University"}
+                    period={item.period}
+                    description={item.description || "Studied and gained knowledge in various subjects related to the field."}
+                  />
+                ))}
               </div>
             </TabsContent>
           </Tabs>

@@ -33,11 +33,9 @@ model Project {
   id          String   @id @default(cuid())
   title       String
   description String
-  imageUrl    String?
-  demoUrl     String?
+  imageUrl    String
   githubUrl   String?
-  tags        String[]
-  featured    Boolean  @default(false)
+  liveUrl     String?
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   userId      String
@@ -48,11 +46,11 @@ model Project {
 
 model BlogPost {
   id          String   @id @default(cuid())
-  slug        String   @unique
   title       String
-  description String
+  slug        String   @unique
   content     String
-  imageUrl    String?
+  excerpt     String?
+  coverImage  String?
   published   Boolean  @default(false)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -75,7 +73,138 @@ model Contact {
   @@map("contacts")
 }
 
+model HomeContent {
+  id          String   @id @default(cuid())
+  title       String
+  subtitle    String
+  description String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("home_content")
+}
+
+model AboutContent {
+  id               String   @id @default(cuid())
+  aboutTitle       String
+  aboutDescription String
+  heading          String
+  skills           String
+  experience       String
+  education        String
+  avatarUrl        String?  // Optional field to store the avatar image URL
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("about_content")
+}
+
+model ContactInfo {
+  id          String   @id @default(cuid())
+  email       String
+  phone       String?
+  address     String?
+  githubUrl   String?
+  linkedinUrl String?
+  twitterUrl  String?
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("contact_info")
+}
+
+// Chatbot Learning System Models
+model ChatConversation {
+  id            String            @id @default(cuid())
+  sessionId     String           // Browser session ID
+  userId        String?          // Optional user ID if authenticated
+  startedAt     DateTime         @default(now()) @map("started_at")
+  endedAt       DateTime?        @map("ended_at")
+  totalMessages Int              @default(0)
+  satisfaction  Float?           // User satisfaction score (1-5)
+  messages      ChatMessage[]
+  feedback      ChatFeedback[]
+  
+  @@map("chat_conversations")
+}
+
+model ChatMessage {
+  id             String           @id @default(cuid())
+  conversationId String
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  content        String
+  sender         MessageSender    // USER or BOT
+  intent         String?          // Detected intent
+  confidence     Float?           // Intent confidence score
+  response       String?          // Bot response if sender is USER
+  responseTime   Int?             // Response time in milliseconds
+  wasHelpful     Boolean?         // User feedback on this specific message
+  createdAt      DateTime         @default(now()) @map("created_at")
+  
+  @@map("chat_messages")
+}
+
+model ChatFeedback {
+  id             String           @id @default(cuid())
+  conversationId String
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  messageId      String?          // Specific message being rated
+  rating         Int              // 1-5 rating
+  comment        String?          // Optional feedback comment
+  feedbackType   FeedbackType     // HELPFUL, NOT_HELPFUL, SUGGESTION, etc.
+  createdAt      DateTime         @default(now()) @map("created_at")
+  
+  @@map("chat_feedback")
+}
+
+model ChatKnowledgeBase {
+  id          String   @id @default(cuid())
+  question    String   // User question pattern
+  answer      String   // Learned response
+  intent      String   // Intent category
+  confidence  Float    @default(0.5) // Confidence in this answer
+  usageCount  Int      @default(0) // How many times this was used
+  successRate Float    @default(0.5) // Success rate based on feedback
+  source      String   @default("learned") // "learned", "manual", "api"
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  @@map("chat_knowledge_base")
+}
+
+model ChatLearningPattern {
+  id              String   @id @default(cuid())
+  pattern         String   // Question pattern (regex or keywords)
+  patternType     String   // "keyword", "regex", "semantic"
+  intent          String   // Associated intent
+  confidence      Float    // Pattern matching confidence
+  examples        String[] // Example phrases that match this pattern
+  successCount    Int      @default(0)
+  totalAttempts   Int      @default(0)
+  lastUsed        DateTime? @map("last_used")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  
+  @@map("chat_learning_patterns")
+}
+
 enum Role {
   USER
   ADMIN
+}
+
+enum MessageSender {
+  USER
+  BOT
+}
+
+enum FeedbackType {
+  HELPFUL
+  NOT_HELPFUL
+  SUGGESTION
+  COMPLAINT
+  COMPLIMENT
 }

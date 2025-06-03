@@ -4,19 +4,38 @@ import { Button } from "@/components/ui/button";
 import { TypewriterEffect } from "@/components/ui/typewriter-effect";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { prisma } from "@/lib/db";
 
-export default function Home() {
-  const words = [
-    { text: "Full-Stack" },
-    { text: "Developer" },
-    { text: "with" },
-    { text: "passion" },
-    { text: "for" },
-    { text: "building" },
-    { text: "modern" },
-    { text: "web" },
-    { text: "applications." },
-  ];
+export default async function Home() {
+  // Fetch home content from database
+  let homeContent = await prisma.homeContent.findFirst();
+  
+  // Use default values if no content exists
+  if (!homeContent) {
+    homeContent = {
+      id: 'default',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      title: "Hi, I'm Your Name",
+      subtitle: "Full Stack Developer",
+      description: "I create beautiful, responsive, and user-friendly websites and applications using modern technologies like Next.js, React, and Tailwind CSS."
+    };
+  }
+  
+  // Split subtitle into words for typewriter effect
+  const words = homeContent.subtitle
+    ? homeContent.subtitle.split(' ').map(word => ({ text: word }))
+    : [
+        { text: "Full-Stack" },
+        { text: "Developer" },
+        { text: "with" },
+        { text: "passion" },
+        { text: "for" },
+        { text: "building" },
+        { text: "modern" },
+        { text: "web" },
+        { text: "applications." },
+      ];
 
   return (
     <>
@@ -24,14 +43,13 @@ export default function Home() {
         <Section className="py-24 md:py-32 lg:py-40 flex flex-col items-center justify-center text-center space-y-10">
           <div className="space-y-6 max-w-3xl mx-auto">
             <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
-              Hi, I'm <span className="text-primary">Your Name</span>
+              {homeContent.title}
             </h1>
             <div className="h-16">
               <TypewriterEffect words={words} className="text-2xl md:text-3xl" />
             </div>
             <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
-              I create beautiful, responsive, and user-friendly websites and applications
-              using modern technologies like Next.js, React, and Tailwind CSS.
+              {homeContent.description}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button asChild size="lg" className="rounded-full">
