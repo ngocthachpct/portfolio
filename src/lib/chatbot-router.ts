@@ -25,7 +25,6 @@ class ChatbotIntentRouter {
     'help': '/api/chatbot/about',
     'default': '/api/chatbot/about'
   };
-
   // Fallback responses for unmatched intents
   private static readonly FALLBACK_RESPONSES = [
     "Tôi có thể giúp bạn tìm hiểu về dự án, kỹ năng, kinh nghiệm, blog hoặc thông tin liên hệ. Bạn muốn biết gì cụ thể?",
@@ -33,6 +32,21 @@ class ChatbotIntentRouter {
     "Hi there! I can help you learn about projects, skills, background, blog content và ways to get in touch.",
     "Tôi sẵn sàng trả lời về portfolio, technical skills, work experience, recent blogs và contact details!"
   ];
+
+  // Get fallback response based on intent
+  static getFallbackResponse(intent: string): string {
+    const fallbackMap: { [key: string]: string } = {
+      'greeting': 'Xin chào! Tôi là chatbot của portfolio này. Tôi có thể giúp bạn tìm hiểu về kinh nghiệm, kỹ năng, dự án và thông tin liên hệ.',
+      'projects': 'Tôi có thể giới thiệu về các dự án được showcase trong portfolio. Hãy hỏi về specific project hoặc technology stack!',
+      'skills': 'Kỹ năng chính bao gồm React, Next.js, TypeScript, Node.js và full-stack development. Bạn muốn biết chi tiết về skill nào?',
+      'about': 'Đây là portfolio của một full-stack developer với passion về modern web technologies. Muốn biết gì cụ thể về background?',
+      'contact': 'Bạn có thể liên hệ qua contact form, email hoặc social media links. Hãy vào phần Contact để xem chi tiết!',
+      'blog': 'Blog chia sẻ kinh nghiệm development, tutorials và insights về công nghệ. Có nhiều bài viết về React, Next.js và best practices!',
+      'default': this.FALLBACK_RESPONSES[Math.floor(Math.random() * this.FALLBACK_RESPONSES.length)]
+    };
+
+    return fallbackMap[intent] || fallbackMap['default'];
+  }
 
   // Route intent to appropriate microservice
   static async routeIntent(intent: string, userMessage: string, baseUrl: string): Promise<any> {
